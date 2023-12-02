@@ -6,8 +6,6 @@ import gymnasium as gym
 import os
 
 # RL models from stable-baselines
-# from stable_baselines3 import GAIL, SAC
-# from stable_baselines3 import ACER
 from stable_baselines3 import SAC
 from stable_baselines3 import PPO
 from stable_baselines3 import A2C
@@ -44,17 +42,6 @@ def train_A2C(env_train, model_name, timesteps=25000):
     print('Training time (A2C): ', (end - start) / 60, ' minutes')
     return model
 
-# def train_ACER(env_train, model_name, timesteps=25000):
-#     start = time.time()
-#     model = ACER('MlpPolicy', env_train, verbose=0)
-#     model.learn(total_timesteps=timesteps)
-#     end = time.time()
-
-    # model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
-    # print('Training time (A2C): ', (end - start) / 60, ' minutes')
-    # return model
-
-
 def train_DDPG(env_train, model_name, timesteps=10000):
     """DDPG model"""
 
@@ -85,26 +72,6 @@ def train_PPO(env_train, model_name, timesteps=50000):
     model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
     print('Training time (PPO): ', (end - start) / 60, ' minutes')
     return model
-
-# def train_GAIL(env_train, model_name, timesteps=1000):
-#     """GAIL Model"""
-#     #from stable_baselines3.gail import ExportDataset, generate_expert_traj
-#     start = time.time()
-#     # generate expert trajectories
-#     model = SAC('MLpPolicy', env_train, verbose=1)
-#     generate_expert_traj(model, 'expert_model_gail', n_timesteps=100, n_episodes=10)
-
-#     # Load dataset
-#     dataset = ExpertDataset(expert_path='expert_model_gail.npz', traj_limitation=10, verbose=1)
-#     model = GAIL('MLpPolicy', env_train, dataset, verbose=1)
-
-#     model.learn(total_timesteps=1000)
-#     end = time.time()
-
-#     model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
-#     print('Training time (PPO): ', (end - start) / 60, ' minutes')
-#     return model
-
 
 def DRL_prediction(df,
                    model,
