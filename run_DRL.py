@@ -61,6 +61,12 @@ def run_model() -> None:
                           rebalance_window = rebalance_window,
                           validation_window=validation_window)
 
+    ### ONLY PPO ###
+    # run_ppo_strategy(df=data, 
+    #                       unique_trade_date= unique_trade_date,
+    #                       rebalance_window = rebalance_window,
+    #                       validation_window=validation_window)
+
     #_logger.info(f"saving model version: {_version}")
 
 if __name__ == "__main__":

@@ -286,3 +286,58 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
 
     end = time.time()
     print("Ensemble Strategy took: ", (end - start) / 60, " minutes")
+
+
+def run_ppo_strategy(df, unique_trade_date, rebalance_window, validation_window) -> None:
+    """Strategy that trains and uses only PPO agent"""
+    print("============Start PPO Strategy============")
+
+    # based on the analysis of the in-sample data
+    insample_turbulence = df[(df.datadate < 20151000) & (df.datadate >= 20090000)]
+    insample_turbulence = insample_turbulence.drop_duplicates(subset=['datadate'])
+    insample_turbulence_threshold = np.quantile(insample_turbulence.turbulence.values, .90)
+
+    start = time.time()
+    for i in range(rebalance_window + validation_window, len(unique_trade_date), rebalance_window):
+        print("============================================")
+        ## initial state is empty
+        end_date_index = df.index[df["datadate"] == unique_trade_date[i - rebalance_window - validation_window]].to_list()[-1]
+        start_date_index = end_date_index - validation_window*30 + 1
+        initial = True if i - rebalance_window - validation_window == 0 else False
+
+        # Tuning turbulence index based on historical data
+        # Turbulence lookback window is one quarter
+        historical_turbulence = df.iloc[end_date_index - validation_window * 30 + 1 : end_date_index + 1, :]
+        historical_turbulence = historical_turbulence.drop_duplicates(subset=['datadate'])
+        historical_turbulence_mean = np.mean(historical_turbulence.turbulence.values)
+
+        turbulence_threshold = insample_turbulence_threshold if historical_turbulence_mean > insample_turbulence_threshold else np.quantile(insample_turbulence.turbulence.values, 1)
+        print("turbulence_threshold: ", turbulence_threshold)
+
+        ############## Environment Setup starts ##############
+        ## training env
+        train = data_split(df, start=20090000, end=unique_trade_date[i - rebalance_window - validation_window])
+        env_train = DummyVecEnv([lambda: StockEnvTrain(train)])
+
+        ## validation env
+        validation = data_split(df, start=unique_trade_date[i - rebalance_window - validation_window], end=unique_trade_date[i - rebalance_window])
+        env_val = DummyVecEnv([lambda: StockEnvValidation(validation, turbulence_threshold=turbulence_threshold, iteration=i)])
+        obs_val = env_val.reset()
+        ############## Environment Setup ends ##############
+
+        ############## Training and Validation starts ##############
+        print("======PPO Training========")
+        model_ppo = train_PPO(env_train, model_name="PPO_100k_dow_{}".format(i), timesteps=100000)
+        print("======PPO Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ", unique_trade_date[i - rebalance_window])
+        DRL_validation(model=model_ppo, test_data=validation, test_env=env_val, test_obs=obs_val)
+        sharpe_ppo = get_validation_sharpe(i)
+        print("PPO Sharpe Ratio: ", sharpe_ppo)
+        ############## Training and Validation ends ##############
+
+        ############## Trading starts ##############
+        print("======Trading from: ", unique_trade_date[i - rebalance_window], "to ", unique_trade_date[i])
+        last_state_ensemble = DRL_prediction(df=df, model=model_ppo, name="ppo", last_state=[], iter_num=i, unique_trade_date=unique_trade_date, rebalance_window=rebalance_window, turbulence_threshold=turbulence_threshold, initial=initial)
+        ############## Trading ends ##############
+
+    end = time.time()
+    print("PPO Strategy took: ", (end - start) / 60, " minutes")
