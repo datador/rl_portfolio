@@ -284,7 +284,7 @@ def run_ppo_strategy(df, unique_trade_date, rebalance_window, validation_window)
         ############## Environment Setup starts ##############
         ## training env
         train = data_split(df, start=20090000, end=unique_trade_date[i - rebalance_window - validation_window])
-        env_train = DummyVecEnv([lambda: StockEnvTrain(train)])
+        env_train = DummyVecEnv([lambda: StockEnvTrain(train, problem='portfolio')])
 
         ## validation env
         validation = data_split(df, start=unique_trade_date[i - rebalance_window - validation_window], end=unique_trade_date[i - rebalance_window])
