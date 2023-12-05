@@ -81,35 +81,6 @@ class StockEnvBase(gym.Env):
         # Ensure the state has the correct shape
         assert len(self.state) == self.observation_space.shape[0], f"State shape mismatch: {len(self.state)} vs {self.observation_space.shape[0]}"
 
-    def _apply_portfolio_action(self, actions):
-        if np.sum(actions) == 0:
-            # If sum of actions is 0, repeat the last actions (hold the current state)
-            actions = self.last_actions if hasattr(self, 'last_actions') else np.zeros_like(actions)
-        else:
-            # Normalize the action to enforce that weights sum up to 1
-            actions = actions / np.sum(actions)
-            self.last_actions = actions
-
-        # Calculate total portfolio value
-        total_portfolio_value = self.state[0] + np.sum(np.array(self.state[1:self.stock_dim + 1]) * np.array(self.state[self.stock_dim + 1:self.stock_dim * 2 + 1]))
-
-        for index in range(self.stock_dim):
-            # Calculate target value for this stock
-            target_value = total_portfolio_value * actions[index]  # actions[0] is for cash
-            current_value = self.state[index + 1] * self.state[index + self.stock_dim + 1]
-
-            if target_value > current_value:
-                # Buy stock
-                self._buy_stock_portfolio(index, target_value - current_value)
-            elif target_value < current_value:
-                # Sell stock
-                self._sell_stock_portfolio(index, current_value - target_value)
-
-        # Update cash position for the remaining cash portion
-        self.state[0] = total_portfolio_value * actions[-1]
-
-
-
 
     def _get_current_weights(self):
         current_prices = np.array(self.state[1:1+self.stock_dim])
@@ -125,31 +96,96 @@ class StockEnvBase(gym.Env):
         cash_weight = self.state[0] / portfolio_value if self.state[0] > 0 else 0
         return np.append(weights, cash_weight)
 
-    def _sell_stock_portfolio(self, index, value):
-        # Calculate the amount of stock to sell based on value
+        
+    def _apply_portfolio_action(self, actions):
+        # Convert actions to a numpy array for element-wise multiplication
+        actions = np.array(actions)
+
+        # Calculate total assets
+        total_assets = self.state[0] + np.sum(np.array(self.state[1:self.stock_dim + 1]) *
+                                            np.array(self.state[self.stock_dim + 1:2*self.stock_dim + 1]))
+        
+        # Calculate target portfolio values based on actions
+        target_values = total_assets * actions
+        
+        # Determine which stocks to sell
+        current_prices = np.array(self.state[1:self.stock_dim + 1])
+        current_holdings = np.array(self.state[self.stock_dim + 1:2*self.stock_dim + 1])
+        current_values = current_prices * current_holdings
+        stocks_to_sell = np.where(current_values > target_values[:-1], current_values - target_values[:-1], 0)
+        
+        # Execute sell actions
+        self._selling_stocks(stocks_to_sell)
+        
+        # Determine which stocks to buy
+        cash_available = self.state[0]
+        stocks_to_buy = np.where(target_values[:-1] > current_values, target_values[:-1] - current_values, 0)
+        
+        # Execute buy actions with the available cash
+        self._buying_stocks(stocks_to_buy, cash_available)
+        
+        # Ensure the final portfolio is within acceptable range of target values
+        self._verify_rebalancing(target_values)
+
+    def _selling_stocks(self, stocks_to_sell):
+        for index, value_to_sell in enumerate(stocks_to_sell):
+            if value_to_sell > 0:
+                stock_price = self.state[index + 1]
+                # Calculate the number of shares to sell
+                shares_to_sell = value_to_sell / stock_price
+                self._sell_stocks_rebalance(index, shares_to_sell)
+
+    def _sell_stocks_rebalance(self, index, shares_to_sell):
         stock_price = self.state[index + 1]
-        amount_to_sell = value / stock_price
-
-        if amount_to_sell > self.state[index + self.stock_dim + 1]:
-            amount_to_sell = self.state[index + self.stock_dim + 1]
-
-        # Update cash balance and stock holding
-        self.state[0] += amount_to_sell * stock_price * (1 - TRANSACTION_FEE_PERCENT)
-        self.state[index + self.stock_dim + 1] -= amount_to_sell
-        self.cost += amount_to_sell * stock_price * TRANSACTION_FEE_PERCENT
+        # Calculate the transaction fee
+        transaction_fee = shares_to_sell * stock_price * TRANSACTION_FEE_PERCENT
+        # Calculate cash increase after selling shares
+        cash_from_sale = shares_to_sell * stock_price - transaction_fee
+        # Update the state
+        self.state[0] += cash_from_sale
+        self.state[index + self.stock_dim + 1] -= shares_to_sell
+        self.cost += transaction_fee
         self.trades += 1
 
-    def _buy_stock_portfolio(self, index, value):
-        # Calculate the amount of stock to buy based on value
+    def _buying_stocks(self, stocks_to_buy, cash_available):
+        for index, value_to_buy in enumerate(stocks_to_buy):
+            if value_to_buy > 0 and cash_available > 0:
+                stock_price = self.state[index + 1]
+                # Calculate the number of shares to buy without exceeding cash available
+                shares_to_buy = min(value_to_buy / stock_price, cash_available / (stock_price * (1 + TRANSACTION_FEE_PERCENT)))
+                self._buy_stocks_rebalance(index, shares_to_buy)
+                cash_available -= shares_to_buy * stock_price * (1 + TRANSACTION_FEE_PERCENT)
+
+    def _buy_stocks_rebalance(self, index, shares_to_buy):
         stock_price = self.state[index + 1]
-        amount_to_buy = value / stock_price
-
-        if self.state[0] < amount_to_buy * stock_price * (1 + TRANSACTION_FEE_PERCENT):
-            # Not enough cash to buy the desired amount, buy as much as possible
-            amount_to_buy = self.state[0] / (stock_price * (1 + TRANSACTION_FEE_PERCENT))
-
-        # Update cash balance and stock holding
-        self.state[0] -= amount_to_buy * stock_price * (1 + TRANSACTION_FEE_PERCENT)
-        self.state[index + self.stock_dim + 1] += amount_to_buy
-        self.cost += amount_to_buy * stock_price * TRANSACTION_FEE_PERCENT
+        # Calculate the transaction fee
+        transaction_fee = shares_to_buy * stock_price * TRANSACTION_FEE_PERCENT
+        # Update the state
+        self.state[0] -= shares_to_buy * stock_price + transaction_fee
+        self.state[index + self.stock_dim + 1] += shares_to_buy
+        self.cost += transaction_fee
         self.trades += 1
+
+    def _verify_rebalancing(self, target_values):
+        """
+        Verify that the portfolio has been rebalanced to closely match the target weights.
+        """
+        # Convert the slices of the state to NumPy arrays for element-wise multiplication
+        current_prices = np.array(self.state[1:self.stock_dim + 1])
+        current_holdings = np.array(self.state[self.stock_dim + 1:2*self.stock_dim + 1])
+
+        # Recalculate the current values of the stocks
+        current_values = current_prices * current_holdings
+        # Add the cash to the current values
+        current_values_with_cash = np.append(current_values, self.state[0])
+
+        # Calculate the differences between the target and current values
+        differences = target_values - current_values_with_cash
+        
+        # Check if the differences are within an acceptable range/tolerance
+        tolerance = self.state[0] * 0.01  # for example, 1% of the cash value
+        # if all(abs(difference) <= tolerance for difference in differences):
+        #     print("Rebalancing successful within the specified tolerance.")
+        # else:
+        #     print("Rebalancing discrepancies found:", differences)
+        #     # Additional logic can be added here to handle discrepancies.

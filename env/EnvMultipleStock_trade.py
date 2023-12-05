@@ -88,6 +88,7 @@ class StockEnvTrade(StockEnvBase):
         else:
             # Normalize the action to enforce that weights sum up to 1
             actions = actions / np.sum(actions)
+            actions = np.round(actions, 2)
         info = {}
         truncated = False
         # print(self.day)
