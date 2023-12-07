@@ -18,7 +18,7 @@ INITIAL_ACCOUNT_BALANCE=1000000
 #STOCK_DIM = 30
 # transaction fee: 1/1000 reasonable percentage
 TRANSACTION_FEE_PERCENT = 0.001
-#REWARD_SCALING = 1e-4
+REWARD_SCALING = 1e-4
 # Get the directory of the current file (__file__)
 current_dir = os.path.dirname(__file__)
 # Move up one directory to get to the 'finrl_modified' directory
