@@ -19,6 +19,7 @@ class StockEnvBase(gym.Env):
         self.day = day
         self.df = df
         self.problem = problem
+        self.daily_returns = []
         self.stock_dim = self._get_stock_dim()
         self.indicators = self._get_indicator_dim()
         self.indicator_names = self._get_indicator_names()
@@ -189,3 +190,15 @@ class StockEnvBase(gym.Env):
         # else:
         #     print("Rebalancing discrepancies found:", differences)
         #     # Additional logic can be added here to handle discrepancies.
+
+
+    def calculate_sharpe_ratio(self):
+        """
+        Calculate the Sharpe Ratio based on the list of daily returns.
+        """
+        if len(self.daily_returns) > 1:
+            mean_return = np.mean(self.daily_returns)
+            std_return = np.std(self.daily_returns)
+            sharpe_ratio = (252**0.5) * mean_return / std_return if std_return != 0 else 0
+            return sharpe_ratio
+        return 0
