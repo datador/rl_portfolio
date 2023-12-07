@@ -59,11 +59,12 @@ def train_DDPG(env_train, model_name, timesteps=10000):
     print('Training time (DDPG): ', (end-start)/60,' minutes')
     return model
 
-def train_PPO(env_train, model_name, timesteps=50000):
+def train_PPO(env_train, model_name, timesteps=50000, learning_rate=0.00025, ent_coef=0.005, batch_size=2048):
+
     """PPO model"""
 
     start = time.time()
-    model = PPO('MlpPolicy', env_train, ent_coef = 0.005, batch_size = 2048)
+    model = PPO('MlpPolicy', env_train, ent_coef = ent_coef, batch_size = batch_size, learning_rate=learning_rate)
     #model = PPO2('MlpPolicy', env_train, ent_coef = 0.005)
 
     model.learn(total_timesteps=timesteps)
@@ -255,7 +256,7 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
     print("Ensemble Strategy took: ", (end - start) / 60, " minutes")
 
 
-def run_ppo_strategy(df, unique_trade_date, rebalance_window, validation_window) -> None:
+def run_ppo_strategy(df, unique_trade_date, rebalance_window, validation_window, timesteps=100000,learning_rate=0.00025, ent_coef=0.005, batch_size=2048) -> None:
     """Strategy that trains and uses only PPO agent"""
     print("============Start PPO Strategy============")
 
@@ -294,7 +295,7 @@ def run_ppo_strategy(df, unique_trade_date, rebalance_window, validation_window)
 
         ############## Training and Validation starts ##############
         print("======PPO Training========")
-        model_ppo = train_PPO(env_train, model_name="PPO_100k_dow_{}".format(i), timesteps=100000)
+        model_ppo = train_PPO(env_train, model_name="PPO_100k_dow_{}".format(i), timesteps=timesteps, ent_coef = ent_coef, batch_size = batch_size, learning_rate=learning_rate)
         print("======PPO Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ", unique_trade_date[i - rebalance_window])
         DRL_validation(model=model_ppo, test_data=validation, test_env=env_val, test_obs=obs_val)
         sharpe_ppo = get_validation_sharpe(i)

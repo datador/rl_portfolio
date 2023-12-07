@@ -27,7 +27,7 @@ def run_model() -> None:
     """Train the model."""
 
     # read and preprocess data
-    preprocessed_path = "done_data_portfolio_test.csv"
+    preprocessed_path = "done_data_djia.csv"
     if os.path.exists(preprocessed_path):
         print(f'Path exists: {preprocessed_path}')
         data = pd.read_csv(preprocessed_path, index_col=0)
@@ -67,7 +67,11 @@ def run_model() -> None:
     run_ppo_strategy(df=data, 
                           unique_trade_date= unique_trade_date,
                           rebalance_window = rebalance_window,
-                          validation_window=validation_window)
+                          validation_window=validation_window,
+                          learning_rate=0.0001,
+                          ent_coef=0.005,
+                          batch_size=2048,
+                          timesteps=150000)
 
     #_logger.info(f"saving model version: {_version}")
 
