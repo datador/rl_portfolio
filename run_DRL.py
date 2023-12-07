@@ -11,6 +11,8 @@ from config.config import *
 # model
 from model.models import *
 import os
+import warnings
+warnings.filterwarnings('ignore')
 
 dow_jones = ['AAPL', 'AXP', 'BA', 'CAT', 'CSCO', 'CVX', 'DD', 'DIS', 'GS', 'HD',
        'IBM', 'INTC', 'JNJ', 'JPM', 'KO', 'MCD', 'MMM', 'MRK', 'MSFT',
