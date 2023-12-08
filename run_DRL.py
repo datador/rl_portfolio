@@ -11,6 +11,8 @@ from config.config import *
 # model
 from model.models import *
 import os
+import warnings
+warnings.filterwarnings('ignore')
 
 dow_jones = ['AAPL', 'AXP', 'BA', 'CAT', 'CSCO', 'CVX', 'DD', 'DIS', 'GS', 'HD',
        'IBM', 'INTC', 'JNJ', 'JPM', 'KO', 'MCD', 'MMM', 'MRK', 'MSFT',
@@ -25,13 +27,13 @@ def run_model() -> None:
     """Train the model."""
 
     # read and preprocess data
-    preprocessed_path = "done_data_portfolio_test.csv"
+    preprocessed_path = "done_data_djia.csv"
     if os.path.exists(preprocessed_path):
         print(f'Path exists: {preprocessed_path}')
         data = pd.read_csv(preprocessed_path, index_col=0)
     else:
         print(f"Path does not exists: {preprocessed_path}")
-        data = preprocess_data(new_data=True, tickers=tickers, start_date='2009-01-01')
+        data = preprocess_data(new_data=True, tickers=dow_jones, start_date='2009-01-01')
      #   print('Backfilling and adding traded dummy')
      #   data = backfill_and_mark_traded(data)
         print('Adding turbulence')
@@ -62,10 +64,11 @@ def run_model() -> None:
     #                       validation_window=validation_window)
 
     ### ONLY PPO ###
-    run_ppo_strategy(df=data, 
+    run_ppo_strategy_full(df=data, 
                           unique_trade_date= unique_trade_date,
                           rebalance_window = rebalance_window,
-                          validation_window=validation_window)
+                          validation_window=validation_window,
+                          problem='trading')
 
     #_logger.info(f"saving model version: {_version}")
 

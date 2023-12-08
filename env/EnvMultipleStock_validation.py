@@ -21,7 +21,7 @@ TRANSACTION_FEE_PERCENT = 0.001
 
 # turbulence index: 90-150 reasonable threshold
 #TURBULENCE_THRESHOLD = 140
-# REWARD_SCALING = 1e-4
+REWARD_SCALING = 1e-4
 
 current_dir = os.path.dirname(__file__)
 # Move up one directory to get to the 'finrl_modified' directory

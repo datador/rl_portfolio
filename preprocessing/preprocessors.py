@@ -36,6 +36,13 @@ def load_new_data(tickers: list, start_date: str = '2009-01-01') -> pd.DataFrame
     data_long = data_long[['datadate', 'tic', 'adjcp', 'open', 'high', 'low', 'volume']]
     data_long = data_long.sort_values(['tic', 'datadate'], ignore_index=True)
 
+    # Verify correct shape
+    min_date = data_long.datadate.min()
+    data_shape = data_long[data_long['datadate'] == data_long.datadate.min()].tic.shape[0]
+    data_match = data_shape == len(tickers)
+    if data_match != True:
+        print(f'SHAPE OF DATA {data_shape}, DOES NOT MATCH TICKER LENGTH {len(tickers)}, \ncheck if all companies are traded over this period')
+
     return data_long
 
 
@@ -121,7 +128,7 @@ def add_technical_indicator(df):
     df['rsi'] = rsi
     df['cci'] = cci
     df['adx'] = dx
-    df['test_add_indicator'] = dx**2
+    #  df['test_add_indicator'] = dx**2
 
     return df
 
