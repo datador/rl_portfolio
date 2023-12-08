@@ -68,10 +68,10 @@ def run_model() -> None:
                           unique_trade_date= unique_trade_date,
                           rebalance_window = rebalance_window,
                           validation_window=validation_window,
-                          learning_rate=0.0001,
-                          ent_coef=0.005,
-                          batch_size=2048,
-                          timesteps=150000)
+                          learning_rate=0.00025,
+                          ent_coef=0.01,
+                          batch_size=2048*2,
+                          timesteps=200000)
 
     #_logger.info(f"saving model version: {_version}")
 

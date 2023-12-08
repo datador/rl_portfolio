@@ -166,8 +166,8 @@ class StockEnvTrade(StockEnvBase):
             # get reward
             end_total_asset = self.state[0] + sum(np.array(self.state[1:self.stock_dim + 1]) * np.array(self.state[self.stock_dim + 1:self.stock_dim * 2 + 1]))
             self.asset_memory.append(end_total_asset)
-            # self.reward = end_total_asset - begin_total_asset
-            self.reward = self.calculate_sharpe_ratio()
+            self.reward = end_total_asset - begin_total_asset
+            #self.reward = self.calculate_sharpe_ratio()
             self.rewards_memory.append(self.reward)
             # self.reward *= REWARD_SCALING
 
