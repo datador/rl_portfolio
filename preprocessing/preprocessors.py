@@ -128,7 +128,7 @@ def add_technical_indicator(df):
     df['rsi'] = rsi
     df['cci'] = cci
     df['adx'] = dx
-    df['test_add_indicator'] = dx**2
+    #  df['test_add_indicator'] = dx**2
 
     return df
 
